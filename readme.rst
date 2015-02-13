@@ -11,16 +11,27 @@ Usage
 
 ``rename [options] match-pattern replace-pattern files``
 
-* options
+* Options
 
-  - ``-v`` verbose mode, output every renaming. This is default.
-  - ``-q`` quiet mode, just renaming without output.
-  - ``-i`` interactive mode, ask every renaming to user. Override by ``-q`` argument.
+  - ``-t``
+
+    + Transaction mode
+    + Default: False
+    + Everything will be done together, no partial renameing will be done
+
+  - ``-i``
+
+    + Interactive Mode
+    + Default: False
+    + Ask every renaming to user
+    + Can be overrided by ``-t`` argument. (Ask only once)
 
 * Patterns
 
-  - Python ``re``.
+  - Python ``re``
 
-* Files
+Example
+-------
 
-  - ``files`` will be feed into ``ls -1``
+* ``$ rename .htm .html *`` renames all ``.htm`` in file names with ``.html`` end.
+
