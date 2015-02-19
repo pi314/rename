@@ -4,85 +4,74 @@ from __future__ import print_function
 import sys
 import re
 import os
+import argparse
 
 PYTHON_VERSION = sys.version_info[0]
 
-transaction_bit = False
-interactive_bit = False
-
-match_pattern   = ''
-replace_pattern = ''
-
-files_list = []
 commit_list = []
-
-def parse_argument ():
-    global transaction_bit
-    global interactive_bit
-    global match_pattern
-    global replace_pattern
-    global files_list
-    global commit_list
-
-    argv = sys.argv[1:]
-    while len(argv) > 0:
-        if argv[0].startswith('-'):
-            for i in argv[0]:
-
-                if i in('t'):
-                    transaction_bit = True
-
-                elif i in ('i'):
-                    interactive_bit = True
-
-            argv = argv[1:]
-            continue
-
-        if match_pattern == '':
-            match_pattern = argv[0]
-            if os.path.exists(argv[0]):
-                print('\033[1;31mPattern \033[1;33m{}\033[m '.format(argv[0]), end='')
-                print('\033[1;31mexists, please use ``mv`` utility instead.\033[m')
-                exit()
-
-        elif replace_pattern == '':
-            replace_pattern = argv[0]
-            if os.path.exists(argv[0]):
-                print('\033[1;31mPattern \033[1;33m{}\033[m '.format(argv[0]), end='')
-                print('\033[1;31mexists, please use ``mv`` utility instead.\033[m')
-                exit()
-
-        else:
-            files_list.append(argv[0])
-
-        argv = argv[1:]
 
 def error_and_exit (message):
     print(message)
     exit()
 
 def main ():
-    parse_argument()
-    print('Match pattern: ', match_pattern)
-    print('Replace string:', replace_pattern)
-    print('Files:         ', ', '.join(files_list))
+    parser = argparse.ArgumentParser(description='Massive rename tool')
 
-    if match_pattern == '':
+    parser.add_argument('-t', action='store_true', dest='transaction_bit',
+                        help='Transaction mode, all tasks will be done together.')
+
+    parser.add_argument('-i', action='store_true', dest='interactive_bit',
+                        help='Interactive mode, every task needs user\'s confirm.')
+
+    parser.add_argument('-l', action='store_true', dest='list_action_bit',
+                        help='Just show tasks list and do nothing.')
+
+    parser.add_argument('match_pattern', type=str,
+                        help='The pattern being replaced.')
+
+    parser.add_argument('replace_pattern', type=str,
+                        help='The pattern being replaced to.')
+
+    parser.add_argument('files_list', nargs=argparse.REMAINDER,
+                        help='File list')
+
+    args = parser.parse_args()
+
+    print('Match pattern:  {}'.format(args.match_pattern) )
+    print('Replace string: {}'.format(args.replace_pattern) )
+    print('Files:', ', '.join(args.files_list))
+
+    if args.match_pattern == '':
         error_and_exit('No match pattern specified.')
+
+    if os.path.exists(args.match_pattern):
+        error_and_exit('\033[1;31mPattern \033[1;33m{}\033[m \033[1;31mexists, please use ``mv`` utility instead.\033[m'.format(args.match_pattern) )
+
+    if os.path.exists(args.replace_pattern):
+        error_and_exit('\033[1;31mPattern \033[1;33m{}\033[m \033[1;31mexists, please use ``mv`` utility instead.\033[m'.format(args.match_pattern) )
     
-    if files_list == []:
+    if args.files_list == []:
         error_and_exit('No files specified')
 
+    if args.list_action_bit:
+        print('Tasks list:')
+
     try:
-        for i in files_list:
-            j = re.sub(match_pattern, replace_pattern, i)
+        for i in args.files_list:
+            j = re.sub(args.match_pattern, args.replace_pattern, i)
+
             if i != j:
-                if transaction_bit:
+
+                if args.list_action_bit:
+                    print('Rename {} to {}'.format(i, j))
+                    continue
+
+                if args.transaction_bit:
                     commit_list.append( (i, j, ) )
                     continue
 
                 a = 'y'
-                if interactive_bit:
+                if args.interactive_bit:
                     print('Rename {} to {} [Y/n/t]?'.format(i, j), end=' ')
                     a = input().strip()
                     while a not in ('Y', 'y', 'N', 'n', 'T', 't', ''):
@@ -101,14 +90,17 @@ def main ():
                     commit_list.append( (i,j) )
 
             else:
-                print( '\033[1;33m{} does not match pattern, skip\033[m'.format(i) )
+                print( '\033[1;33m{} not changed, skip\033[m'.format(i) )
 
     except Exception as e:
         print(e)
         exit(1)
 
+    if args.list_action_bit:
+        print('-l argument specified, do nothing, exit')
+
     a = 'y'
-    if transaction_bit:
+    if args.transaction_bit:
         print('This program will perform the following task:')
         for i in commit_list:
             print('Rename {} to {}'.format(i[0], i[1]))
