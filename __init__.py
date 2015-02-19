@@ -57,15 +57,21 @@ def parse_argument ():
 
         argv = argv[1:]
 
+def error_and_exit (message):
+    print(message)
+    exit()
+
 def main ():
     parse_argument()
     print('Match pattern: ', match_pattern)
     print('Replace string:', replace_pattern)
     print('Files:         ', ', '.join(files_list))
+
+    if match_pattern == '':
+        error_and_exit('No match pattern specified.')
     
     if files_list == []:
-        print('No files specified, exit')
-        exit()
+        error_and_exit('No files specified')
 
     try:
         for i in files_list:
