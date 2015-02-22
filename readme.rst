@@ -33,5 +33,5 @@ Usage
 Example
 -------
 
-* ``$ rename .htm .html *`` renames all ``.htm`` in file names with ``.html`` end.
+* ``$ rename '\.htm' .html *`` renames all ``.htm`` in file names with ``.html`` end.
 

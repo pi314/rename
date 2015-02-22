@@ -8,10 +8,21 @@ import argparse
 
 PYTHON_VERSION = sys.version_info[0]
 
+TAG_LEVEL_COLOR = {
+    'ok':       '\033[1;32m',
+    'error':    '\033[1;31m',
+    'warning':  '\033[1;33m',
+    'warn':     '\033[1;33m',
+    'info':     '',
+}
+
 commit_list = []
 
+def tag_message (level, tag, message):
+    print( '{}[{:^6}]\033[m {}'.format(TAG_LEVEL_COLOR[level.lower()], tag, message) )
+
 def error_and_exit (message):
-    print(message)
+    tag_message('error', 'error', message)
     exit()
 
 def main ():
@@ -42,68 +53,78 @@ def main ():
     print('Files:', ', '.join(args.files_list))
 
     if args.match_pattern == '':
-        error_and_exit('No match pattern specified.')
+        error_and_exit('Match pattern cannot be empty string.')
 
     if os.path.exists(args.match_pattern):
-        error_and_exit('\033[1;31mPattern \033[1;33m{}\033[m \033[1;31mexists, please use ``mv`` utility instead.\033[m'.format(args.match_pattern) )
+        error_and_exit('Pattern \033[1;33m{}\033[m exists, please use ``mv`` utility instead.'.format(args.match_pattern) )
 
     if os.path.exists(args.replace_pattern):
-        error_and_exit('\033[1;31mPattern \033[1;33m{}\033[m \033[1;31mexists, please use ``mv`` utility instead.\033[m'.format(args.match_pattern) )
+        error_and_exit('Pattern \033[1;33m{}\033[m exists, please use ``mv`` utility instead.'.format(args.replace_pattern) )
     
     if args.files_list == []:
         error_and_exit('No files specified')
 
+    print()
+
     if args.list_action_bit:
         print('Tasks list:')
 
-    try:
-        for i in args.files_list:
-            j = re.sub(args.match_pattern, args.replace_pattern, i)
+    for i in args.files_list:
+        try:
 
-            if i != j:
+            if re.search(args.match_pattern, i):
 
-                if args.list_action_bit:
-                    print('Rename {} to {}'.format(i, j))
-                    continue
+                j = re.sub(args.match_pattern, args.replace_pattern, i)
 
-                if args.transaction_bit:
-                    commit_list.append( (i, j, ) )
-                    continue
+                if i != j:
 
-                a = 'y'
-                if args.interactive_bit:
-                    print('Rename {} to {} [Y/n/t]?'.format(i, j), end=' ')
-                    a = input().strip()
-                    while a not in ('Y', 'y', 'N', 'n', 'T', 't', ''):
-                        print('rename {} to {}?'.format(i, j), end=' ')
+                    if args.list_action_bit:
+                        tag_message('ok', 'rename', '{} -> {}'.format(i, j) )
+                        continue
+
+                    if args.transaction_bit:
+                        commit_list.append( (i, j, ) )
+                        continue
+
+                    a = 'y'
+                    if args.interactive_bit:
+                        print('Rename {} to {} [Y/n/t]?'.format(i, j), end=' ')
                         a = input().strip()
+                        while a not in ('Y', 'y', 'N', 'n', 'T', 't', ''):
+                            print('Rename {} to {} [Y/n/t]?'.format(i, j), end=' ')
+                            a = input().strip()
 
-                if a in ('N', 'n'):
-                    print('\033[1;33mRenaming canceled\033[m')
+                    if a in ('N', 'n'):
+                        tag_message('warning', 'skip', '\033[1;33m{}\033[m canceled\033[m'.format(i) )
 
-                elif a in ('Y', 'y', ''):
-                    print('\033[1;32mRename {} to {}\033[m'.format(i, j))
-                    os.rename(i, j)
+                    elif a in ('Y', 'y', ''):
+                        os.rename(i, j)
+                        tag_message('ok', 'rename', '{} -> {}'.format(i, j) )
 
-                elif a in ('T', 't'):
-                    print('\033[1;32mAdd ({}, {}) into tranaction list\033[m'.format(i, j))
-                    commit_list.append( (i,j) )
+                    elif a in ('T', 't'):
+                        print('\033[1;32mAdd ({}, {}) into tranaction list\033[m'.format(i, j))
+                        commit_list.append( (i,j) )
+
+                else:
+                    tag_message('warning', 'skip', '\033[1;33m{}\033[m not changed'.format(i) )
 
             else:
-                print( '\033[1;33m{} not changed, skip\033[m'.format(i) )
+                tag_message('warning', 'skip', '\033[1;33m{}\033[m not changed'.format(i) )
 
-    except Exception as e:
-        print(e)
-        exit(1)
+        except Exception as e:
+            print('\033[1;31m'+ str(e) +'\033[m')
+
+    print()
 
     if args.list_action_bit:
         print('-l argument specified, do nothing, exit')
+        exit()
 
     a = 'y'
-    if args.transaction_bit:
+    if len(commit_list):
         print('This program will perform the following task:')
         for i in commit_list:
-            print('Rename {} to {}'.format(i[0], i[1]))
+            tag_message('info', 'rename', '{} -> {}'.format(i[0], i[1]) )
 
         print('Continue? [Y/n]', end=' ')
         a = input().strip()
@@ -111,12 +132,26 @@ def main ():
             print('Continue? [Y/n]', end=' ')
             a = input().strip()
 
+        print()
+
     if a in ('Y', 'y'):
-        for i in commit_list:
-            os.rename(i[0], i[1])
+        try:
+            for i in commit_list:
+                os.rename(i[0], i[1])
+                tag_message('ok', 'rename', '{} -> {}'.format(i[0], i[1]) )
+
+        except Exception as e:
+            print('\033[1;31m'+ str(e) +'\033[m')
+
+        if len(commit_list):
+            print()
 
     else:
-        print('\033[1;31mRenaming canceled\033[m')
+        tag_message('error', 'error', 'Transaction canceled')
+        print()
+
+    print('Tasks finished, exit')
 
 if __name__ == '__main__':
     main()
+
