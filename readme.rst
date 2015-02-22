@@ -26,6 +26,12 @@ Usage
     + Ask every renaming to user
     + Can be overrided by ``-t`` argument. (Ask only once)
 
+  - ``-l``
+
+    + List mode
+    + Default: False
+    + Just list out tasks and exit
+
 * Patterns
 
   - Python ``re``
